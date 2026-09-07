@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en" data-theme="emerald">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cash in hand — TurboMagic console mock</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+<style>
+  :root {
+    --cash-in: #0d9488;   /* validated pair: CVD ΔE 14.3 deutan, 23.1 normal */
+    --cash-out: #c2620a;
+    --ink-1: #1c1917;
+    --ink-2: #57534e;
+    --ink-3: #8b8681;
+    --surface: #fcfcfb;
+  }
+  body { background: #f4f5f4; color: var(--ink-1); font-feature-settings: "tnum"; }
+  .num { font-variant-numeric: tabular-nums; font-family: ui-monospace, "SF Mono", "IBM Plex Mono", monospace; }
+  .card-flat { background: #fff; border: 1px solid #e7e5e4; border-radius: 12px; }
+  .grid-line { stroke: #e7e5e4; stroke-width: 1; }
+  .axis-txt { fill: var(--ink-3); font-size: 10px; font-family: ui-sans-serif, system-ui; }
+  .screen { display: none; }
+  .screen.on { display: block; }
+  .chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid #e7e5e4; background: #fafaf9; color: var(--ink-2); white-space: nowrap; }
+  .src-payment  { border-color:#99f6e4; background:#f0fdfa; color:#115e59; }
+  .src-voucher  { border-color:#fed7aa; background:#fff7ed; color:#9a3412; }
+  .src-bill     { border-color:#fed7aa; background:#fff7ed; color:#9a3412; }
+  .src-transfer { border-color:#ddd6fe; background:#f5f3ff; color:#5b21b6; }
+  .src-opening  { border-color:#e7e5e4; background:#fafaf9; color:#57534e; }
+  .src-adjust   { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
+  .rev          { border-color:#e7e5e4; background:#f5f5f4; color:#78716c; }
+  .tt { position: fixed; pointer-events: none; z-index: 60; background: #1c1917; color: #fafaf9; font-size: 11px;
+        padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity .1s; white-space: nowrap; }
+  .tt.on { opacity: 1; }
+  table.tbl { width: 100%; border-collapse: collapse; }
+  .tbl th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3);
+            font-weight: 600; padding: 8px 12px; border-bottom: 1px solid #e7e5e4; }
+  .tbl td { padding: 10px 12px; border-bottom: 1px solid #f5f5f4; font-size: 13px; vertical-align: top; }
+  .tbl tbody tr:hover { background: #fafaf9; }
+  .note { border-left: 3px solid #0d9488; background: #f0fdfa; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12.5px; color: #134e4a; }
+  .warn { border-left: 3px solid #c2620a; background: #fff7ed; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12.5px; color: #7c2d12; }
+  .mockbar { background: #0f172a; color: #cbd5e1; font-size: 11px; letter-spacing: .02em; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ── mock banner ─────────────────────────────────────────────── -->
+<div class="mockbar px-4 py-1.5 flex items-center gap-3">
+  <span class="font-semibold text-white">MOCK</span>
+  <span>Cash in hand — proposed screens. Nothing here is wired to the API. Figures are illustrative.</span>
+</div>
+
+<!-- ── app chrome ──────────────────────────────────────────────── -->
+<header class="bg-white border-b border-stone-200">
+  <div class="max-w-[1200px] mx-auto px-5 h-14 flex items-center gap-6">
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded bg-teal-700 text-white grid place-items-center text-[13px] font-bold">C</div>
+      <span class="font-semibold text-[15px]">Ctraac</span>
+    </div>
+    <nav class="hidden md:flex items-center gap-1 text-[13px] text-stone-600">
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Invoices</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Payments</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Payables</a>
+      <a class="px-2.5 py-1.5 rounded bg-teal-50 text-teal-800 font-medium">Cash in hand</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Expenses</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">More ▾</a>
+    </nav>
+    <div class="ml-auto flex items-center gap-3 text-[12px] text-stone-500">
+      <span>supportAdmin</span>
+      <div class="w-7 h-7 rounded-full bg-stone-200"></div>
+    </div>
+  </div>
+</header>
+
+<!-- ── screen switcher ─────────────────────────────────────────── -->
+<div class="bg-white border-b border-stone-200">
+  <div class="max-w-[1200px] mx-auto px-5 flex gap-1 overflow-x-auto" id="tabs">
+    <button data-s="overview" class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-teal-700 text-teal-800 font-medium whitespace-nowrap">1 · Cash in hand</button>
+    <button data-s="ledger"   class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">2 · Cash book</button>
+    <button data-s="voucher"  class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">3 · Expense voucher</button>
+    <button data-s="count"    class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">4 · Cash count</button>
+    <button data-s="transfer" class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">5 · Transfer</button>
+    <button data-s="model"    class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">6 · Data model</button>
+  </div>
+</div>
+
+<main class="max-w-[1200px] mx-auto px-5 py-6">
+
+<!-- ══════════ 1 · OVERVIEW ══════════════════════════════════════ -->
+<section class="screen on" id="s-overview">
+  <div class="flex items-start justify-between mb-5 flex-wrap gap-3">
+    <div>
+      <h1 class="text-[22px] font-semibold">Cash in hand</h1>
+      <p class="text-[13px] text-stone-500 mt-0.5">Every note we physically hold, and the document behind each movement.</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-sm">Record expense</button>
+      <button class="btn btn-sm">Transfer</button>
+      <button class="btn btn-sm btn-primary">Count cash</button>
+    </div>
+  </div>
+
+  <!-- KPI row: no chart — these are single headline numbers -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Cash in hand</div>
+      <div class="num text-[26px] font-semibold mt-1 leading-none">6,610.50</div>
+      <div class="text-[11px] text-stone-500 mt-1.5">QAR · 3 cash boxes · as of 07 Sep 2026 14:20</div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Received today</div>
+      <div class="num text-[26px] font-semibold mt-1 leading-none" style="color:var(--cash-in)">+3,200.00</div>
+      <div class="text-[11px] text-stone-500 mt-1.5">4 receipts · all finalized</div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Paid out today</div>
+      <div class="num text-[26px] font-semibold mt-1 leading-none" style="color:var(--cash-out)">−1,742.25</div>
+      <div class="text-[11px] text-stone-500 mt-1.5">6 vouchers · 1 vendor bill</div>
+    </div>
+    <div class="card-flat p-4 ring-1 ring-orange-200">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Longest uncounted</div>
+      <div class="num text-[26px] font-semibold mt-1 leading-none">11 days</div>
+      <div class="text-[11px] mt-1.5" style="color:var(--cash-out)">Ahmed K. — field float</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+    <!-- boxes -->
+    <div class="lg:col-span-1 space-y-3">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold px-1">Cash boxes</div>
+
+      <div class="card-flat p-4 hover:shadow-sm cursor-pointer" onclick="go('ledger')">
+        <div class="flex items-baseline justify-between">
+          <div class="font-medium text-[14px]">Head office petty cash</div>
+          <div class="num text-[17px] font-semibold">4,820.00</div>
+        </div>
+        <div class="text-[12px] text-stone-500 mt-1">Custodian · Fatima R. &nbsp;·&nbsp; QAR</div>
+        <div class="flex items-center gap-2 mt-2.5">
+          <span class="chip src-opening">Counted 2 days ago</span>
+          <span class="chip" style="border-color:#99f6e4;background:#f0fdfa;color:#115e59">Variance 0.00</span>
+        </div>
+      </div>
+
+      <div class="card-flat p-4 ring-1 ring-orange-200 hover:shadow-sm cursor-pointer" onclick="go('count')">
+        <div class="flex items-baseline justify-between">
+          <div class="font-medium text-[14px]">Ahmed K. — field float</div>
+          <div class="num text-[17px] font-semibold">1,150.00</div>
+        </div>
+        <div class="text-[12px] text-stone-500 mt-1">Custodian · Ahmed Khalil &nbsp;·&nbsp; QAR</div>
+        <div class="flex items-center gap-2 mt-2.5">
+          <span class="chip src-adjust">Counted 11 days ago</span>
+          <span class="chip src-adjust">Last variance −25.00</span>
+        </div>
+      </div>
+
+      <div class="card-flat p-4 hover:shadow-sm cursor-pointer" onclick="go('ledger')">
+        <div class="flex items-baseline justify-between">
+          <div class="font-medium text-[14px]">Doha workshop</div>
+          <div class="num text-[17px] font-semibold">640.50</div>
+        </div>
+        <div class="text-[12px] text-stone-500 mt-1">Custodian · Rakesh M. &nbsp;·&nbsp; QAR</div>
+        <div class="flex items-center gap-2 mt-2.5">
+          <span class="chip src-opening">Never counted</span>
+        </div>
+      </div>
+
+      <div class="note">
+        A box's balance is <b>summed from its entries</b>, never stored. Same rule as an invoice's
+        <span class="num">amountPaid</span> — a stored balance is the one state nothing self-corrects.
+      </div>
+    </div>
+
+    <!-- chart -->
+    <div class="lg:col-span-2 card-flat p-4">
+      <div class="flex items-start justify-between mb-1">
+        <div>
+          <div class="font-medium text-[14px]">Daily cash movement</div>
+          <div class="text-[12px] text-stone-500">All boxes · QAR · last 14 days</div>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] text-stone-600">
+          <span class="flex items-center gap-1.5"><span style="width:9px;height:9px;border-radius:2px;background:var(--cash-in);display:inline-block"></span>In</span>
+          <span class="flex items-center gap-1.5"><span style="width:9px;height:9px;border-radius:2px;background:var(--cash-out);display:inline-block"></span>Out</span>
+        </div>
+      </div>
+      <svg id="chart" viewBox="0 0 720 250" class="w-full" style="height:250px"></svg>
+      <div class="text-[11px] text-stone-400 mt-1">Hover a bar for the day's figure and document count.</div>
+    </div>
+  </div>
+
+  <!-- recent movement -->
+  <div class="card-flat overflow-hidden">
+    <div class="px-4 py-3 border-b border-stone-200 flex items-center justify-between flex-wrap gap-2">
+      <div class="font-medium text-[14px]">Today's movement</div>
+      <div class="flex gap-2 text-[12px]">
+        <select class="select select-bordered select-xs"><option>All boxes</option><option>Head office petty cash</option></select>
+        <select class="select select-bordered select-xs"><option>All sources</option><option>Customer receipt</option><option>Expense voucher</option><option>Vendor bill</option><option>Transfer</option></select>
+      </div>
+    </div>
+    <table class="tbl">
+      <thead><tr>
+        <th style="width:74px">Time</th><th>Source</th><th>Description</th><th>Box</th>
+        <th class="text-right">In</th><th class="text-right">Out</th><th class="text-right">Balance</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="num text-stone-500">14:02</td>
+          <td><span class="chip src-voucher">Expense voucher</span></td>
+          <td>EV-0412 · Fuel — workshop pickup <span class="text-stone-400">· maintenance</span></td>
+          <td class="text-stone-600">Doha workshop</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td class="num text-right" style="color:var(--cash-out)">180.00</td>
+          <td class="num text-right">640.50</td>
+        </tr>
+        <tr>
+          <td class="num text-stone-500">12:40</td>
+          <td><span class="chip src-payment">Customer receipt</span></td>
+          <td>RCP-2026-00218 · Al Mana Trading <span class="text-stone-400">· INV-2026-01188</span></td>
+          <td class="text-stone-600">Head office petty cash</td>
+          <td class="num text-right" style="color:var(--cash-in)">1,500.00</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td class="num text-right">4,820.00</td>
+        </tr>
+        <tr>
+          <td class="num text-stone-500">11:15</td>
+          <td><span class="chip src-bill">Vendor bill</span></td>
+          <td>VB-0093 · Qatar Cool — office AC service</td>
+          <td class="text-stone-600">Head office petty cash</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td class="num text-right" style="color:var(--cash-out)">950.00</td>
+          <td class="num text-right">3,320.00</td>
+        </tr>
+        <tr>
+          <td class="num text-stone-500">10:05</td>
+          <td><span class="chip src-transfer">Transfer in</span></td>
+          <td>Bank withdrawal — QNB ****4471 <span class="text-stone-400">· float top-up</span></td>
+          <td class="text-stone-600">Head office petty cash</td>
+          <td class="num text-right" style="color:var(--cash-in)">1,700.00</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td class="num text-right">4,270.00</td>
+        </tr>
+        <tr>
+          <td class="num text-stone-500">09:22</td>
+          <td><span class="chip src-voucher">Expense voucher</span></td>
+          <td>EV-0411 · Stationery — Al Rawnaq <span class="text-stone-400">· other</span></td>
+          <td class="text-stone-600">Head office petty cash</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td class="num text-right" style="color:var(--cash-out)">612.25</td>
+          <td class="num text-right">2,570.00</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════ 2 · LEDGER ════════════════════════════════════════ -->
+<section class="screen" id="s-ledger">
+  <div class="flex items-start justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <div class="text-[12px] text-stone-500"><a class="link link-hover" onclick="go('overview')">Cash in hand</a> › Head office petty cash</div>
+      <h1 class="text-[22px] font-semibold mt-0.5">Head office petty cash <span class="text-[13px] font-normal text-stone-500">· QAR · custodian Fatima R.</span></h1>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-sm">Record expense</button>
+      <button class="btn btn-sm">Transfer</button>
+      <button class="btn btn-sm btn-primary" onclick="go('count')">Count cash</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+    <div class="card-flat p-3"><div class="text-[11px] text-stone-400 uppercase font-semibold tracking-wide">Balance</div><div class="num text-[20px] font-semibold">4,820.00</div></div>
+    <div class="card-flat p-3"><div class="text-[11px] text-stone-400 uppercase font-semibold tracking-wide">In · Sep</div><div class="num text-[20px] font-semibold" style="color:var(--cash-in)">18,400.00</div></div>
+    <div class="card-flat p-3"><div class="text-[11px] text-stone-400 uppercase font-semibold tracking-wide">Out · Sep</div><div class="num text-[20px] font-semibold" style="color:var(--cash-out)">15,930.75</div></div>
+    <div class="card-flat p-3"><div class="text-[11px] text-stone-400 uppercase font-semibold tracking-wide">Last counted</div><div class="text-[15px] font-medium mt-1">05 Sep · 0.00 variance</div></div>
+  </div>
+
+  <div class="card-flat overflow-hidden">
+    <div class="px-4 py-3 border-b border-stone-200 flex flex-wrap items-center gap-2">
+      <input class="input input-bordered input-sm w-52" placeholder="Search description / reference" />
+      <select class="select select-bordered select-sm"><option>All sources</option></select>
+      <input type="date" class="input input-bordered input-sm" value="2026-09-01" />
+      <input type="date" class="input input-bordered input-sm" value="2026-09-07" />
+      <div class="ml-auto flex gap-2">
+        <button class="btn btn-xs">Export CSV</button>
+        <button class="btn btn-xs">Print cash book</button>
+      </div>
+    </div>
+    <table class="tbl">
+      <thead><tr>
+        <th style="width:92px">Date</th><th>Source</th><th>Description</th><th>Entered by</th>
+        <th class="text-right">In</th><th class="text-right">Out</th><th class="text-right">Balance</th><th style="width:40px"></th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="num text-stone-500">07 Sep</td><td><span class="chip src-payment">Receipt</span></td>
+            <td>RCP-2026-00218 · Al Mana Trading</td><td class="text-stone-500">Fatima R.</td>
+            <td class="num text-right" style="color:var(--cash-in)">1,500.00</td><td class="num text-right text-stone-300">—</td>
+            <td class="num text-right font-medium">4,820.00</td><td class="text-stone-400 text-center">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">07 Sep</td><td><span class="chip src-bill">Vendor bill</span></td>
+            <td>VB-0093 · Qatar Cool — office AC service</td><td class="text-stone-500">Fatima R.</td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">950.00</td>
+            <td class="num text-right">3,320.00</td><td class="text-stone-400 text-center">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">07 Sep</td><td><span class="chip src-transfer">Transfer in</span></td>
+            <td>Bank withdrawal — QNB ****4471</td><td class="text-stone-500">Fatima R.</td>
+            <td class="num text-right" style="color:var(--cash-in)">1,700.00</td><td class="num text-right text-stone-300">—</td>
+            <td class="num text-right">4,270.00</td><td class="text-stone-400 text-center">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">07 Sep</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td>EV-0411 · Stationery — Al Rawnaq</td><td class="text-stone-500">Fatima R.</td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">612.25</td>
+            <td class="num text-right">2,570.00</td><td class="text-stone-400 text-center">⋯</td></tr>
+
+        <!-- reversal pair -->
+        <tr class="bg-stone-50/60">
+          <td class="num text-stone-500">06 Sep</td><td><span class="chip rev">Reversal</span></td>
+          <td><span class="line-through text-stone-400">EV-0409 · Taxi — airport run</span>
+              <div class="text-[11px] text-stone-500 mt-0.5">Reverses entry #4471 · voucher cancelled, receipt was for a personal trip</div></td>
+          <td class="text-stone-500">Fatima R.</td>
+          <td class="num text-right" style="color:var(--cash-in)">120.00</td><td class="num text-right text-stone-300">—</td>
+          <td class="num text-right">3,182.25</td><td class="text-stone-400 text-center">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">05 Sep</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td class="text-stone-400"><span class="line-through">EV-0409 · Taxi — airport run</span>
+              <div class="text-[11px] mt-0.5">Reversed 06 Sep by entry #4488</div></td>
+            <td class="text-stone-500">Fatima R.</td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right text-stone-400">120.00</td>
+            <td class="num text-right text-stone-500">3,062.25</td><td class="text-stone-400 text-center">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">01 Sep</td><td><span class="chip src-opening">Opening</span></td>
+            <td>Opening balance — September</td><td class="text-stone-500">System</td>
+            <td class="num text-right" style="color:var(--cash-in)">2,350.00</td><td class="num text-right text-stone-300">—</td>
+            <td class="num text-right">2,350.00</td><td class="text-stone-400 text-center">⋯</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="warn mt-4">
+    <b>A posted entry is never edited or deleted — it is reversed.</b> Cancelling voucher EV-0409 did not
+    remove its line; it posted an equal, opposite entry that names it. Otherwise the count sheet Fatima
+    signed on 05 September stops reconciling against a book that has changed underneath it.
+  </div>
+</section>
+
+<!-- ══════════ 3 · EXPENSE VOUCHER ══════════════════════════════ -->
+<section class="screen" id="s-voucher">
+  <h1 class="text-[22px] font-semibold">Expense voucher</h1>
+  <p class="text-[13px] text-stone-500 mt-0.5 mb-5">The existing form, plus the two fields that make it part of the cash book.</p>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div class="lg:col-span-3 card-flat p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-medium text-[15px]">New expense voucher</div>
+        <span class="chip src-opening">EV-0413 · draft</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <label class="form-control">
+          <span class="text-[12px] font-medium text-stone-600 mb-1">Expense date</span>
+          <input type="date" value="2026-09-07" class="input input-bordered input-sm" />
+          <span class="text-[11px] text-stone-400 mt-1">NEW — today the voucher only has createdAt</span>
+        </label>
+        <label class="form-control">
+          <span class="text-[12px] font-medium text-stone-600 mb-1">Category</span>
+          <select class="select select-bordered select-sm"><option>maintenance</option><option>salary</option><option>rent</option><option>utility</option><option>other</option></select>
+        </label>
+      </div>
+
+      <label class="form-control mt-4">
+        <span class="text-[12px] font-medium text-stone-600 mb-1">Short description</span>
+        <input class="input input-bordered input-sm" value="Fuel — workshop pickup, Al Wakrah run" />
+      </label>
+
+      <div class="grid grid-cols-2 gap-4 mt-4">
+        <label class="form-control">
+          <span class="text-[12px] font-medium text-stone-600 mb-1">Amount</span>
+          <div class="join">
+            <span class="join-item btn btn-sm btn-disabled !bg-stone-100 !text-stone-500 no-animation">QAR</span>
+            <input class="join-item input input-bordered input-sm num w-full" value="180.00" />
+          </div>
+        </label>
+        <label class="form-control">
+          <span class="text-[12px] font-medium text-stone-600 mb-1">Paid by</span>
+          <select class="select select-bordered select-sm" id="pm" onchange="toggleBox()">
+            <option value="cash">cash</option><option value="bank">bank</option><option value="card">card</option><option value="cheque">cheque</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-4 p-3 rounded-lg" style="background:#f0fdfa;border:1px solid #ccfbf1" id="boxpick">
+        <label class="form-control">
+          <span class="text-[12px] font-semibold" style="color:#115e59">Paid from which cash box &nbsp;<span class="chip" style="border-color:#5eead4;background:#fff;color:#115e59">NEW · required for cash</span></span>
+          <select class="select select-bordered select-sm mt-1.5">
+            <option>Doha workshop — balance 820.50</option>
+            <option>Head office petty cash — balance 4,820.00</option>
+            <option>Ahmed K. — field float — balance 1,150.00</option>
+          </select>
+          <span class="text-[11.5px] mt-1.5" style="color:#134e4a">
+            Saving posts one <b>out</b> entry of QAR 180.00 against this box, on the same transaction as the voucher.
+            Balance after: <span class="num font-semibold">640.50</span>.
+          </span>
+        </label>
+      </div>
+
+      <div class="mt-4">
+        <span class="text-[12px] font-medium text-stone-600">Receipt / evidence</span>
+        <div class="mt-1.5 border border-dashed border-stone-300 rounded-lg p-4 text-center text-[12px] text-stone-500 bg-stone-50">
+          <div class="mb-2">Drop a file, or <span class="link">browse</span></div>
+          <div class="inline-flex items-center gap-2 bg-white border border-stone-200 rounded px-2.5 py-1.5">
+            <span>📎</span><span class="text-stone-700">fuel-receipt-070926.jpg</span>
+            <span class="chip">staged</span>
+            <span class="text-stone-400 cursor-pointer">✕</span>
+          </div>
+          <div class="mt-2 text-[11px] text-stone-400">Uploads once the voucher row exists — the existing staged mode.</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 mt-5">
+        <button class="btn btn-sm btn-primary">Create voucher</button>
+        <button class="btn btn-sm btn-ghost">Cancel</button>
+        <span class="text-[11.5px] text-stone-400 ml-auto">Signed by · Rakesh M. · Workshop supervisor</span>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2 space-y-3">
+      <div class="card-flat p-4">
+        <div class="font-medium text-[14px] mb-2">What the voucher becomes</div>
+        <div class="text-[12.5px] text-stone-600 leading-relaxed">
+          Two rows, one transaction:
+        </div>
+        <div class="mt-2.5 space-y-2 text-[12px]">
+          <div class="p-2.5 rounded border border-stone-200 bg-stone-50">
+            <div class="font-semibold text-stone-700">adminExpenseVouchers</div>
+            <div class="num text-stone-500 mt-1">EV-0413 · maintenance · 180.0000 · paidFromCashAccountId → Doha workshop</div>
+            <div class="text-stone-500 mt-1">the paper — what was bought, who signed, the receipt image</div>
+          </div>
+          <div class="p-2.5 rounded border" style="border-color:#ccfbf1;background:#f0fdfa">
+            <div class="font-semibold" style="color:#115e59">adminCashEntries</div>
+            <div class="num mt-1" style="color:#134e4a">#4492 · out · 180.0000 · source adminExpenseVoucher/EV-0413</div>
+            <div class="mt-1" style="color:#134e4a">the money — the only thing the balance is summed from</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        A voucher with no entry is invisible to the cash book. An entry with no voucher is what the
+        count catches. Neither is allowed to exist alone, so the entry rides the voucher's own
+        transaction — same rule the repo already holds for audit rows.
+      </div>
+      <div class="warn">
+        <b>Cancelling or deleting a voucher posts a reversal</b>, it does not remove the entry.
+        The reversal carries the reason and both rows keep pointing at each other.
+      </div>
+      <div class="card-flat p-4">
+        <div class="font-medium text-[14px] mb-1.5">Non-cash vouchers still work</div>
+        <div class="text-[12.5px] text-stone-600">Pick <span class="num">bank</span> or <span class="num">card</span> and no box is asked for and no entry is posted — the voucher records the expense and the cash book is silent, which is correct. Every voucher already in the table is exactly this case.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 4 · COUNT ════════════════════════════════════════ -->
+<section class="screen" id="s-count">
+  <h1 class="text-[22px] font-semibold">Cash count</h1>
+  <p class="text-[13px] text-stone-500 mt-0.5 mb-5">Ahmed K. — field float · counted by Fatima R. · 07 Sep 2026</p>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div class="lg:col-span-3 card-flat overflow-hidden">
+      <div class="px-4 py-3 border-b border-stone-200 font-medium text-[14px]">Denomination sheet</div>
+      <table class="tbl">
+        <thead><tr><th>Denomination</th><th class="text-right" style="width:110px">Count</th><th class="text-right" style="width:130px">Value</th></tr></thead>
+        <tbody>
+          <tr><td>QAR 500 note</td><td class="text-right"><input class="input input-bordered input-xs w-16 num text-right" value="1"></td><td class="num text-right">500.00</td></tr>
+          <tr><td>QAR 100 note</td><td class="text-right"><input class="input input-bordered input-xs w-16 num text-right" value="5"></td><td class="num text-right">500.00</td></tr>
+          <tr><td>QAR 50 note</td><td class="text-right"><input class="input input-bordered input-xs w-16 num text-right" value="2"></td><td class="num text-right">100.00</td></tr>
+          <tr><td>QAR 10 note</td><td class="text-right"><input class="input input-bordered input-xs w-16 num text-right" value="2"></td><td class="num text-right">20.00</td></tr>
+          <tr><td>QAR 5 note</td><td class="text-right"><input class="input input-bordered input-xs w-16 num text-right" value="1"></td><td class="num text-right">5.00</td></tr>
+          <tr><td>QAR 1 note</td><td class="text-right"><input class="input input-bordered input-xs w-16 num text-right" value="0"></td><td class="num text-right">0.00</td></tr>
+          <tr><td>Coins</td><td class="text-right"><input class="input input-bordered input-xs w-16 num text-right" value="—"></td><td class="num text-right">0.00</td></tr>
+        </tbody>
+        <tfoot><tr class="bg-stone-50">
+          <td class="font-semibold text-[13px]">Counted total</td><td></td>
+          <td class="num text-right font-semibold text-[15px]">1,125.00</td>
+        </tr></tfoot>
+      </table>
+    </div>
+
+    <div class="lg:col-span-2 space-y-3">
+      <div class="card-flat p-4">
+        <div class="flex justify-between items-baseline"><span class="text-[13px] text-stone-600">Book balance</span><span class="num text-[17px] font-semibold">1,150.00</span></div>
+        <div class="flex justify-between items-baseline mt-1.5"><span class="text-[13px] text-stone-600">Counted</span><span class="num text-[17px] font-semibold">1,125.00</span></div>
+        <hr class="my-2.5 border-stone-200">
+        <div class="flex justify-between items-baseline"><span class="text-[13px] font-semibold">Variance</span><span class="num text-[20px] font-semibold" style="color:var(--cash-out)">−25.00</span></div>
+        <div class="text-[11.5px] text-stone-500 mt-1">Short. The book says there should be 25.00 more in the box than there is.</div>
+      </div>
+
+      <div class="card-flat p-4">
+        <div class="text-[12px] font-semibold text-stone-600 mb-1.5">Variance reason <span class="text-red-600">required</span></div>
+        <select class="select select-bordered select-sm w-full">
+          <option>Missing receipt — spend not yet vouchered</option>
+          <option>Miscount at previous count</option>
+          <option>Cash lost / stolen</option>
+          <option>Rounding on a foreign-currency purchase</option>
+          <option>Unknown — under investigation</option>
+        </select>
+        <textarea class="textarea textarea-bordered textarea-sm w-full mt-2" rows="2" placeholder="Note…">Ahmed reports a taxi fare paid without a receipt on 02 Sep.</textarea>
+      </div>
+
+      <div class="warn">
+        Saving posts an <b>adjustment</b> entry of −25.00 carrying this reason, and only then does the
+        book agree with the box. An adjustment is the only way the balance moves without a document —
+        which is exactly why it must name a person and a reason.
+      </div>
+
+      <button class="btn btn-sm btn-primary w-full">Save count &amp; post adjustment</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 5 · TRANSFER ═════════════════════════════════════ -->
+<section class="screen" id="s-transfer">
+  <h1 class="text-[22px] font-semibold">Transfer</h1>
+  <p class="text-[13px] text-stone-500 mt-0.5 mb-5">Moving cash without spending it — a withdrawal, a deposit, or handing a float to a technician.</p>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div class="lg:col-span-3 card-flat p-5">
+      <div class="grid grid-cols-2 gap-4">
+        <label class="form-control">
+          <span class="text-[12px] font-medium text-stone-600 mb-1">From</span>
+          <select class="select select-bordered select-sm">
+            <option>Head office petty cash — 4,820.00</option>
+            <option>Bank · QNB ****4471</option>
+          </select>
+        </label>
+        <label class="form-control">
+          <span class="text-[12px] font-medium text-stone-600 mb-1">To</span>
+          <select class="select select-bordered select-sm">
+            <option>Ahmed K. — field float — 1,150.00</option>
+            <option>Bank · QNB ****4471</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mt-4">
+        <label class="form-control">
+          <span class="text-[12px] font-medium text-stone-600 mb-1">Amount</span>
+          <div class="join"><span class="join-item btn btn-sm btn-disabled !bg-stone-100 !text-stone-500 no-animation">QAR</span>
+          <input class="join-item input input-bordered input-sm num w-full" value="1,000.00" /></div>
+        </label>
+        <label class="form-control">
+          <span class="text-[12px] font-medium text-stone-600 mb-1">Date</span>
+          <input type="date" value="2026-09-07" class="input input-bordered input-sm" />
+        </label>
+      </div>
+      <label class="form-control mt-4">
+        <span class="text-[12px] font-medium text-stone-600 mb-1">Reference / note</span>
+        <input class="input input-bordered input-sm" value="Weekly float for Al Wakrah installations" />
+      </label>
+
+      <div class="mt-4 p-3 rounded-lg bg-violet-50 border border-violet-200 text-[12px] text-violet-900">
+        Posts <b>two</b> entries on one transaction — <span class="num">out 1,000.00</span> from Head office,
+        <span class="num">in 1,000.00</span> to Ahmed K. — each naming the other. Total cash in hand does not move.
+      </div>
+      <button class="btn btn-sm btn-primary mt-4">Post transfer</button>
+    </div>
+
+    <div class="lg:col-span-2 space-y-3">
+      <div class="note">
+        A transfer is the only movement with <b>two</b> entries. Everything else has exactly one, and a
+        document behind it.
+      </div>
+      <div class="warn">
+        <b>A transfer never crosses currencies.</b> A box holds one currency, snapshotted, and the
+        totals are never blended — the same call vendor bills already made. Moving QAR into a USD box
+        is two separate acts with a rate somebody has to state.
+      </div>
+      <div class="card-flat p-4">
+        <div class="font-medium text-[14px] mb-1.5">Bank is not a cash box</div>
+        <div class="text-[12.5px] text-stone-600">"Bank" here is a label on the entry, not a second ledger. This feature counts
+        <i>cash we physically hold</i>. A full bank ledger is a bigger thing and does not need to be
+        decided now.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 6 · MODEL ════════════════════════════════════════ -->
+<section class="screen" id="s-model">
+  <h1 class="text-[22px] font-semibold">What it costs to build</h1>
+  <p class="text-[13px] text-stone-500 mt-0.5 mb-5">Three new tables, four hook-ins, one migration to the voucher.</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+    <div class="card-flat p-4">
+      <div class="font-semibold text-[13.5px]">adminCashAccounts</div>
+      <div class="text-[12px] text-stone-500 mt-1">A place cash physically sits.</div>
+      <div class="num text-[11.5px] text-stone-600 mt-2 leading-relaxed">
+        id · adminAppId · name<br>custodianStaffId / Name<br>currency · openingBalance<br>openingDate · status<br>+ standard fields
+      </div>
+    </div>
+    <div class="card-flat p-4" style="border-color:#ccfbf1;background:#f0fdfa">
+      <div class="font-semibold text-[13.5px]" style="color:#115e59">adminCashEntries</div>
+      <div class="text-[12px] mt-1" style="color:#134e4a">The ledger. The only writer of movement.</div>
+      <div class="num text-[11.5px] mt-2 leading-relaxed" style="color:#134e4a">
+        id · adminCashAccountId<br>entryDate · direction (in/out)<br>amount · currency<br>sourceType · sourceId<br>counterpartEntryId<br>reversalOfEntryId<br>description · reference
+      </div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="font-semibold text-[13.5px]">adminCashCounts</div>
+      <div class="text-[12px] text-stone-500 mt-1">A physical count, and what it disagreed with.</div>
+      <div class="num text-[11.5px] text-stone-600 mt-2 leading-relaxed">
+        id · adminCashAccountId<br>countDate · countedAmount<br>bookBalance · variance<br>varianceReason · note<br>denominations (JSON)<br>adjustmentEntryId
+      </div>
+    </div>
+  </div>
+
+  <div class="card-flat overflow-hidden mb-5">
+    <div class="px-4 py-3 border-b border-stone-200 font-medium text-[14px]">Where an entry comes from</div>
+    <table class="tbl">
+      <thead><tr><th>Source</th><th>Posted when</th><th>Direction</th><th>Reversed when</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip src-payment">adminPayment</span></td>
+            <td>the receipt is <b>finalized</b> and <span class="num">type = "cash"</span></td>
+            <td style="color:var(--cash-in)">in</td><td>the payment is voided or deleted</td></tr>
+        <tr><td><span class="chip src-voucher">adminExpenseVoucher</span></td>
+            <td>the voucher is created with <span class="num">paymentMethod = "cash"</span></td>
+            <td style="color:var(--cash-out)">out</td><td>the voucher is inactivated or deleted</td></tr>
+        <tr><td><span class="chip src-bill">adminVendorBill</span></td>
+            <td><span class="num">recordPayment</span> with <span class="num">paymentMethod = "cash"</span></td>
+            <td style="color:var(--cash-out)">out</td><td>never — that path already has no unwind</td></tr>
+        <tr><td><span class="chip src-transfer">transfer</span></td>
+            <td>an operator posts one</td><td>a pair</td><td>reversed as a pair</td></tr>
+        <tr><td><span class="chip src-adjust">adjustment</span></td>
+            <td>a count finds a variance</td><td>either</td><td>a later count</td></tr>
+        <tr><td><span class="chip src-opening">opening</span></td>
+            <td>the box is created</td><td style="color:var(--cash-in)">in</td><td>never</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="card-flat p-4">
+      <div class="font-medium text-[14px] mb-2">Migration to the existing voucher</div>
+      <div class="text-[12.5px] text-stone-600 leading-relaxed">
+        <span class="num">adminExpenseVouchers</span> gains five nullable columns —
+        <span class="num">expenseDate</span>, <span class="num">currency</span>,
+        <span class="num">paymentMethod</span>, <span class="num">paidFromCashAccountId</span>,
+        <span class="num">adminCashEntryId</span> — plus <span class="num">adminAppId</span>, which it
+        does not have today. Every existing row reads as a non-cash expense, which is what they are:
+        nothing in the table was ever paid from a box that existed.
+      </div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="font-medium text-[14px] mb-2">The rules that have to hold</div>
+      <ul class="text-[12.5px] text-stone-600 leading-relaxed list-disc pl-4 space-y-1">
+        <li>Balance is <b>summed</b>, never stored.</li>
+        <li>A posted entry is reversed, never edited or deleted.</li>
+        <li>The entry rides the document's own transaction.</li>
+        <li>One currency per box; never blended.</li>
+        <li>Only a finalized, non-voided receipt posts.</li>
+        <li>A negative balance is <b>flagged, not refused</b> — refusing it makes a
+            late-entered receipt unenterable and pushes the operator off the book entirely.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="tt" id="tt"></div>
+
+<script>
+/* ── screen switching ───────────────────────────────────────── */
+function go(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === 's'+'-'+name));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const on = b.dataset.s === name;
+    b.classList.toggle('border-teal-700', on); b.classList.toggle('text-teal-800', on); b.classList.toggle('font-medium', on);
+    b.classList.toggle('border-transparent', !on); b.classList.toggle('text-stone-500', !on);
+  });
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => go(b.dataset.s));
+
+function toggleBox(){
+  document.getElementById('boxpick').style.display =
+    document.getElementById('pm').value === 'cash' ? 'block' : 'none';
+}
+
+/* ── grouped bar chart: 14 days, in vs out ──────────────────── */
+const DAYS = [
+  {d:'25 Aug', i:1200, o:640,  ic:2, oc:3},
+  {d:'26 Aug', i:0,    o:310,  ic:0, oc:2},
+  {d:'27 Aug', i:2600, o:1480, ic:3, oc:5},
+  {d:'28 Aug', i:800,  o:920,  ic:1, oc:4},
+  {d:'31 Aug', i:1500, o:2050, ic:2, oc:6},
+  {d:'01 Sep', i:3400, o:760,  ic:4, oc:3},
+  {d:'02 Sep', i:900,  o:1340, ic:1, oc:5},
+  {d:'03 Sep', i:1750, o:480,  ic:2, oc:2},
+  {d:'04 Sep', i:0,    o:1120, ic:0, oc:4},
+  {d:'05 Sep', i:2200, o:1860, ic:3, oc:7},
+  {d:'06 Sep', i:1400, o:530,  ic:2, oc:2},
+  {d:'07 Sep', i:3200, o:1742, ic:4, oc:7},
+];
+(function drawChart(){
+  const svg = document.getElementById('chart');
+  const W = 720, H = 250, L = 52, R = 10, T = 14, B = 34;
+  const pw = W - L - R, ph = H - T - B;
+  const max = 3600, ticks = [0, 900, 1800, 2700, 3600];
+  const y = v => T + ph - (v / max) * ph;
+  const bandW = pw / DAYS.length;
+  const barW = Math.min(13, (bandW - 8) / 2);
+  const fmt = n => n.toLocaleString('en-US');
+  let s = '';
+
+  ticks.forEach(t => {
+    s += `<line class="grid-line" x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}"/>`;
+    s += `<text class="axis-txt" x="${L-8}" y="${y(t)+3.5}" text-anchor="end">${fmt(t)}</text>`;
+  });
+
+  DAYS.forEach((day, k) => {
+    const cx = L + bandW * k + bandW / 2;
+    // 2px surface gap between the two bars of a group
+    const xi = cx - barW - 1, xo = cx + 1;
+    const hi = Math.max(0, ph - (y(day.i) - T)), ho = Math.max(0, ph - (y(day.o) - T));
+    if (day.i > 0) s += `<rect class="bar" data-t="${day.d} · in QAR ${fmt(day.i)} · ${day.ic} receipt${day.ic===1?'':'s'}" x="${xi}" y="${y(day.i)}" width="${barW}" height="${hi}" rx="4" fill="var(--cash-in)"/>`;
+    if (day.o > 0) s += `<rect class="bar" data-t="${day.d} · out QAR ${fmt(day.o)} · ${day.oc} document${day.oc===1?'':'s'}" x="${xo}" y="${y(day.o)}" width="${barW}" height="${ho}" rx="4" fill="var(--cash-out)"/>`;
+    if (k % 2 === 0 || k === DAYS.length - 1) s += `<text class="axis-txt" x="${cx}" y="${H-14}" text-anchor="middle">${day.d}</text>`;
+  });
+  // direct label on the latest pair only — never a number on every bar
+  const last = DAYS[DAYS.length-1], lcx = L + bandW*(DAYS.length-1) + bandW/2;
+  s += `<text class="axis-txt" style="fill:var(--cash-in);font-weight:600" x="${lcx-barW-1+barW/2}" y="${y(last.i)-5}" text-anchor="middle">3,200</text>`;
+  s += `<text class="axis-txt" style="fill:var(--cash-out);font-weight:600" x="${lcx+1+barW/2}" y="${y(last.o)-5}" text-anchor="middle">1,742</text>`;
+  s += `<line class="grid-line" style="stroke:#d6d3d1" x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}"/>`;
+  svg.innerHTML = s;
+
+  const tt = document.getElementById('tt');
+  svg.querySelectorAll('.bar').forEach(r => {
+    r.style.cursor = 'pointer';
+    r.addEventListener('mousemove', e => {
+      tt.textContent = r.dataset.t; tt.classList.add('on');
+      tt.style.left = (e.clientX + 12) + 'px'; tt.style.top = (e.clientY - 30) + 'px';
+      r.setAttribute('stroke', '#fff'); r.setAttribute('stroke-width', '2');
+    });
+    r.addEventListener('mouseleave', () => { tt.classList.remove('on'); r.removeAttribute('stroke'); });
+  });
+})();
+</script>
+</body>
+</html>

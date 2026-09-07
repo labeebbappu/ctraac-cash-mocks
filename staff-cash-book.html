@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="en" data-theme="emerald">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Staff cash book — TurboMagic console mock</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+<style>
+  :root {
+    --cash-in: #0d9488;   /* validated pair: CVD ΔE 14.3 deutan · 23.1 normal · both pass contrast on #fcfcfb */
+    --cash-out: #c2620a;
+    --ink-1: #1c1917;
+    --ink-2: #57534e;
+    --ink-3: #8b8681;
+  }
+  body { background: #f4f5f4; color: var(--ink-1); font-feature-settings: "tnum"; }
+  .num { font-variant-numeric: tabular-nums; font-family: ui-monospace, "SF Mono", "IBM Plex Mono", monospace; }
+  .card-flat { background: #fff; border: 1px solid #e7e5e4; border-radius: 12px; }
+  .grid-line { stroke: #e7e5e4; stroke-width: 1; }
+  .zero-line { stroke: #a8a29e; stroke-width: 1; }
+  .axis-txt { fill: var(--ink-3); font-size: 10px; font-family: ui-sans-serif, system-ui; }
+  .screen { display: none; }
+  .screen.on { display: block; }
+  .chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid #e7e5e4; background: #fafaf9; color: var(--ink-2); white-space: nowrap; }
+  .src-handover   { border-color:#99f6e4; background:#f0fdfa; color:#115e59; }
+  .src-voucher    { border-color:#fed7aa; background:#fff7ed; color:#9a3412; }
+  .src-return     { border-color:#fed7aa; background:#fff7ed; color:#9a3412; }
+  .src-opening    { border-color:#e7e5e4; background:#fafaf9; color:#57534e; }
+  .src-adjust     { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
+  .src-payroll    { border-color:#ddd6fe; background:#f5f3ff; color:#5b21b6; }
+  .rev            { border-color:#e7e5e4; background:#f5f5f4; color:#78716c; }
+  .st-draft     { border-color:#e7e5e4; background:#fafaf9; color:#57534e; }
+  .st-submitted { border-color:#bfdbfe; background:#eff6ff; color:#1e40af; }
+  .st-approved  { border-color:#99f6e4; background:#f0fdfa; color:#115e59; }
+  .st-queried   { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
+  .st-settled   { border-color:#e7e5e4; background:#f5f5f4; color:#78716c; }
+  .tt { position: fixed; pointer-events: none; z-index: 60; background: #1c1917; color: #fafaf9; font-size: 11px;
+        padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity .1s; white-space: pre; line-height:1.5; }
+  .tt.on { opacity: 1; }
+  table.tbl { width: 100%; border-collapse: collapse; }
+  .tbl th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3);
+            font-weight: 600; padding: 8px 12px; border-bottom: 1px solid #e7e5e4; }
+  .tbl td { padding: 10px 12px; border-bottom: 1px solid #f5f5f4; font-size: 13px; vertical-align: top; }
+  .tbl tbody tr:hover { background: #fafaf9; }
+  .note { border-left: 3px solid #0d9488; background: #f0fdfa; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12.5px; color: #134e4a; }
+  .warn { border-left: 3px solid #c2620a; background: #fff7ed; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12.5px; color: #7c2d12; }
+  .mockbar { background: #0f172a; color: #cbd5e1; font-size: 11px; letter-spacing: .02em; }
+  .meter { height: 5px; border-radius: 999px; background: #f0efee; overflow: hidden; }
+  .meter > i { display:block; height:100%; border-radius: 999px; background: var(--cash-out); }
+  .owed { color: var(--cash-out); }
+  .holds { color: var(--cash-in); }
+  @media print { .noprint { display:none !important; } body { background:#fff; } }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="mockbar px-4 py-1.5 flex items-center gap-3 noprint">
+  <span class="font-semibold text-white">MOCK</span>
+  <span>Staff cash book — proposed screens. Nothing is wired to the API. Every figure is illustrative.</span>
+  <a class="ml-auto underline decoration-dotted" href="./cash-in-hand.html">← office cash in hand</a>
+</div>
+
+<header class="bg-white border-b border-stone-200 noprint">
+  <div class="max-w-[1200px] mx-auto px-5 h-14 flex items-center gap-6">
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded bg-teal-700 text-white grid place-items-center text-[13px] font-bold">C</div>
+      <span class="font-semibold text-[15px]">Ctraac</span>
+    </div>
+    <nav class="hidden md:flex items-center gap-1 text-[13px] text-stone-600">
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Invoices</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Payables</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Cash in hand</a>
+      <a class="px-2.5 py-1.5 rounded bg-teal-50 text-teal-800 font-medium">Staff cash</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Expenses</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">Staffs</a>
+      <a class="px-2.5 py-1.5 rounded hover:bg-stone-100">More ▾</a>
+    </nav>
+    <div class="ml-auto flex items-center gap-3 text-[12px] text-stone-500">
+      <span>supportAdmin</span>
+      <div class="w-7 h-7 rounded-full bg-stone-200"></div>
+    </div>
+  </div>
+</header>
+
+<div class="bg-white border-b border-stone-200 noprint">
+  <div class="max-w-[1200px] mx-auto px-5 flex gap-1 overflow-x-auto" id="tabs">
+    <button data-s="overview"   class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-teal-700 text-teal-800 font-medium whitespace-nowrap">1 · Staff cash</button>
+    <button data-s="book"       class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">2 · One staff's cash book</button>
+    <button data-s="submission" class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">3 · Weekly submission</button>
+    <button data-s="settle"     class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">4 · Settle</button>
+    <button data-s="statement"  class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">5 · Signed statement</button>
+    <button data-s="model"      class="tab-btn px-3 py-2.5 text-[13px] border-b-2 border-transparent text-stone-500 hover:text-stone-800 whitespace-nowrap">6 · Data model</button>
+  </div>
+</div>
+
+<main class="max-w-[1200px] mx-auto px-5 py-6">
+
+<!-- ══════════ 1 · OVERVIEW ══════════════════════════════════════ -->
+<section class="screen on" id="s-overview">
+  <div class="flex items-start justify-between mb-5 flex-wrap gap-3">
+    <div>
+      <h1 class="text-[22px] font-semibold">Staff cash</h1>
+      <p class="text-[13px] text-stone-500 mt-0.5">One running account per staff member. Positive means they are holding our cash; negative means we owe them.</p>
+    </div>
+    <div class="flex gap-2 noprint">
+      <button class="btn btn-sm" onclick="go('submission')">Review submissions <span class="badge badge-sm ml-1">4</span></button>
+      <button class="btn btn-sm">Hand over cash</button>
+      <button class="btn btn-sm btn-primary" onclick="go('settle')">Settle a staff member</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Cash with staff</div>
+      <div class="num text-[26px] font-semibold mt-1 leading-none holds">3,730.00</div>
+      <div class="text-[11px] text-stone-500 mt-1.5">QAR · 3 staff holding a float</div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Owed to staff</div>
+      <div class="num text-[26px] font-semibold mt-1 leading-none owed">1,777.50</div>
+      <div class="text-[11px] text-stone-500 mt-1.5">QAR · 4 staff out of pocket · agreed, unpaid</div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Claims awaiting approval</div>
+      <div class="num text-[26px] font-semibold mt-1 leading-none">2,287.50</div>
+      <div class="text-[11px] text-stone-500 mt-1.5">4 submissions · not in any balance yet</div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Oldest unanswered claim</div>
+      <div class="text-[26px] font-semibold mt-1 leading-none">18 <span class="text-[14px] font-normal text-stone-500">days</span></div>
+      <div class="text-[11px] text-stone-500 mt-1.5">Bilal Hussain · SUB-0040</div>
+    </div>
+  </div>
+
+  <div class="warn mb-5">
+    <b>Per staff member, one signed number. Across staff, never one number.</b> The 3,730.00 we are holding
+    out there is an asset; the 1,777.50 we owe is a liability. Netting them to <span class="num">1,952.50</span>
+    would state that we have money we do not have, and hide four people who are financing the company out of
+    their own pocket. Nothing in this screen ever adds those two tiles together.
+  </div>
+
+  <div class="card-flat p-4 mb-5">
+    <div class="flex items-start justify-between flex-wrap gap-2 mb-1">
+      <div>
+        <div class="font-medium text-[14px]">Where every staff member stands</div>
+        <div class="text-[12px] text-stone-500">Agreed balance only. Claims still awaiting approval are the ghost figure at the right of each row.</div>
+      </div>
+      <div class="flex items-center gap-4 text-[11px] text-stone-500">
+        <span class="flex items-center gap-1.5"><i style="width:10px;height:10px;border-radius:3px;background:var(--cash-out);display:inline-block"></i> we owe them</span>
+        <span class="flex items-center gap-1.5"><i style="width:10px;height:10px;border-radius:3px;background:var(--cash-in);display:inline-block"></i> they hold our cash</span>
+      </div>
+    </div>
+    <svg id="balchart" viewBox="0 0 760 300" width="100%" style="max-height:320px"></svg>
+  </div>
+
+  <div class="card-flat overflow-hidden">
+    <div class="px-4 py-3 border-b border-stone-200 flex flex-wrap items-center gap-2 noprint">
+      <input class="input input-bordered input-sm w-56" placeholder="Search staff name / number" />
+      <select class="select select-bordered select-sm"><option>All positions</option><option>We owe them</option><option>Holding our cash</option><option>Settled</option></select>
+      <select class="select select-bordered select-sm"><option>All roles</option><option>supervisor</option><option>driver</option><option>staff</option></select>
+      <div class="ml-auto flex gap-2">
+        <button class="btn btn-xs">Export CSV</button>
+        <button class="btn btn-xs">Print all statements</button>
+      </div>
+    </div>
+    <table class="tbl">
+      <thead><tr>
+        <th>Staff</th><th>Role</th>
+        <th class="text-right">Agreed balance</th>
+        <th class="text-right">Awaiting approval</th>
+        <th>Since last submission</th>
+        <th>Last settled</th><th style="width:40px"></th>
+      </tr></thead>
+      <tbody>
+        <tr class="cursor-pointer" onclick="go('book')">
+          <td><div class="font-medium">Ahmed Rashid</div><div class="text-[11px] text-stone-500">#14 · Field technician</div></td>
+          <td class="text-stone-500">staff</td>
+          <td class="num text-right font-medium owed">−412.50</td>
+          <td class="num text-right text-stone-600">592.50 <span class="chip st-submitted ml-1">SUB-0042</span></td>
+          <td><div class="text-[12px]">today</div><div class="meter mt-1"><i style="width:4%"></i></div></td>
+          <td class="text-stone-500 text-[12px]">02 Sep · 1,000.00</td>
+          <td class="text-stone-400 text-center">⋯</td>
+        </tr>
+        <tr>
+          <td><div class="font-medium">Bilal Hussain</div><div class="text-[11px] text-stone-500">#22 · Field technician</div></td>
+          <td class="text-stone-500">staff</td>
+          <td class="num text-right font-medium owed">−1,240.75</td>
+          <td class="num text-right text-stone-600">1,455.00 <span class="chip st-submitted ml-1">SUB-0040</span></td>
+          <td><div class="text-[12px] owed font-medium">18 days</div><div class="meter mt-1"><i style="width:90%"></i></div></td>
+          <td class="text-stone-500 text-[12px]">11 Aug · 640.00</td>
+          <td class="text-stone-400 text-center">⋯</td>
+        </tr>
+        <tr>
+          <td><div class="font-medium">Rakesh Menon</div><div class="text-[11px] text-stone-500">#31 · Driver</div></td>
+          <td class="text-stone-500">driver</td>
+          <td class="num text-right font-medium owed">−86.00</td>
+          <td class="num text-right text-stone-400">240.00 <span class="chip st-draft ml-1">3 drafts</span></td>
+          <td><div class="text-[12px]">5 days</div><div class="meter mt-1"><i style="width:25%"></i></div></td>
+          <td class="text-stone-500 text-[12px]">30 Aug · 315.00</td>
+          <td class="text-stone-400 text-center">⋯</td>
+        </tr>
+        <tr>
+          <td><div class="font-medium">Mary Sebastian</div><div class="text-[11px] text-stone-500">#08 · Accounts</div></td>
+          <td class="text-stone-500">staff</td>
+          <td class="num text-right font-medium owed">−38.25</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td><div class="text-[12px]">2 days</div><div class="meter mt-1"><i style="width:10%"></i></div></td>
+          <td class="text-stone-500 text-[12px]">05 Sep · 120.00</td>
+          <td class="text-stone-400 text-center">⋯</td>
+        </tr>
+        <tr>
+          <td><div class="font-medium">Jinu Thomas</div><div class="text-[11px] text-stone-500">#19 · Technician</div></td>
+          <td class="text-stone-500">staff</td>
+          <td class="num text-right font-medium text-stone-400">0.00</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td><div class="text-[12px] text-stone-500">settled</div><div class="meter mt-1"><i style="width:0%"></i></div></td>
+          <td class="text-stone-500 text-[12px]">06 Sep · 288.00</td>
+          <td class="text-stone-400 text-center">⋯</td>
+        </tr>
+        <tr>
+          <td><div class="font-medium">Fatima Rahman</div><div class="text-[11px] text-stone-500">#03 · Office admin</div></td>
+          <td class="text-stone-500">staff</td>
+          <td class="num text-right font-medium holds">150.00</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td><div class="text-[12px]">3 days</div><div class="meter mt-1"><i style="width:15%"></i></div></td>
+          <td class="text-stone-500 text-[12px]">04 Sep · 150.00</td>
+          <td class="text-stone-400 text-center">⋯</td>
+        </tr>
+        <tr>
+          <td><div class="font-medium">Suresh Kumar</div><div class="text-[11px] text-stone-500">#11 · Installation lead</div></td>
+          <td class="text-stone-500">supervisor</td>
+          <td class="num text-right font-medium holds">1,180.00</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td><div class="text-[12px]">6 days</div><div class="meter mt-1"><i style="width:30%"></i></div></td>
+          <td class="text-stone-500 text-[12px]">01 Sep · 2,000.00</td>
+          <td class="text-stone-400 text-center">⋯</td>
+        </tr>
+        <tr>
+          <td><div class="font-medium">Nasser Al-Kuwari</div><div class="text-[11px] text-stone-500">#02 · Supervisor</div></td>
+          <td class="text-stone-500">supervisor</td>
+          <td class="num text-right font-medium holds">2,400.00</td>
+          <td class="num text-right text-stone-300">—</td>
+          <td><div class="text-[12px] owed font-medium">24 days</div><div class="meter mt-1"><i style="width:100%"></i></div></td>
+          <td class="text-stone-500 text-[12px]">14 Aug · 2,500.00</td>
+          <td class="text-stone-400 text-center">⋯</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note mt-4">
+    <b>The two rows worth acting on are at opposite ends of the list, and one column finds both.</b>
+    Bilal has been out of pocket for 18 days waiting on us. Nasser has held 2,400.00 of our cash for 24 days
+    without submitting anything. Sorting by balance separates them; sorting by <i>since last submission</i>
+    puts them next to each other, which is the question a supervisor is actually asking.
+  </div>
+</section>
+
+<!-- ══════════ 2 · ONE STAFF'S CASH BOOK ════════════════════════ -->
+<section class="screen" id="s-book">
+  <div class="flex items-start justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <div class="text-[12px] text-stone-500 noprint"><a class="link link-hover" onclick="go('overview')">Staff cash</a> › Ahmed Rashid</div>
+      <h1 class="text-[22px] font-semibold mt-0.5">Ahmed Rashid <span class="text-[13px] font-normal text-stone-500">· #14 · Field technician · QAR</span></h1>
+    </div>
+    <div class="flex gap-2 noprint">
+      <button class="btn btn-sm" onclick="go('submission')">Review SUB-0042</button>
+      <button class="btn btn-sm">Hand over cash</button>
+      <button class="btn btn-sm btn-primary" onclick="go('settle')">Settle 412.50</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+    <div class="card-flat p-4" style="border-color:#fed7aa;background:#fffbf6">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Agreed balance</div>
+      <div class="num text-[30px] font-semibold mt-1 leading-none owed">−412.50</div>
+      <div class="text-[12px] mt-1.5" style="color:#7c2d12"><b>We owe Ahmed 412.50.</b> This is what he is handed if he walks in now.</div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">Awaiting approval</div>
+      <div class="num text-[30px] font-semibold mt-1 leading-none text-stone-700">592.50</div>
+      <div class="text-[12px] text-stone-500 mt-1.5">SUB-0042 · 7 vouchers · submitted today. Not in the balance.</div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="text-[11px] uppercase tracking-wide text-stone-400 font-semibold">If all of it is approved</div>
+      <div class="num text-[30px] font-semibold mt-1 leading-none text-stone-700">−1,005.00</div>
+      <div class="text-[12px] text-stone-500 mt-1.5"><span class="num">412.50 + 592.50</span> — shown with its arithmetic, never as a balance on its own.</div>
+    </div>
+  </div>
+
+  <div class="card-flat p-4 mb-4">
+    <div class="flex items-start justify-between flex-wrap gap-2 mb-1">
+      <div>
+        <div class="font-medium text-[14px]">Balance, 24 August → 7 September</div>
+        <div class="text-[12px] text-stone-500">The book moves when a claim is <b>approved</b>. The dashed line is where he actually stood on the day he spent the money.</div>
+      </div>
+      <div class="flex items-center gap-4 text-[11px] text-stone-500">
+        <span class="flex items-center gap-1.5"><svg width="18" height="4"><rect x="0" y="0.5" width="9" height="3" rx="1.5" fill="var(--cash-in)"/><rect x="9" y="0.5" width="9" height="3" rx="1.5" fill="var(--cash-out)"/></svg> agreed balance <span class="text-stone-400">(above / below zero)</span></span>
+        <span class="flex items-center gap-1.5"><svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke="#a8a29e" stroke-width="2" stroke-dasharray="4 3"/></svg> including unapproved claims</span>
+      </div>
+    </div>
+    <svg id="linechart" viewBox="0 0 760 260" width="100%" style="max-height:280px"></svg>
+  </div>
+
+  <div class="warn mb-4">
+    <b>Between 4 and 6 September the book said he was holding 1,053.00 of our cash while he was in fact
+    39.50 out of pocket.</b> That gap is not a defect — it is the price of a balance that only moves on things
+    both sides have agreed, which is the only kind of balance you can hand someone cash against. The gap is
+    made visible here and aged on the list screen, rather than papered over by letting an unreviewed claim
+    move the number.
+  </div>
+
+  <div class="card-flat overflow-hidden">
+    <div class="px-4 py-3 border-b border-stone-200 flex flex-wrap items-center gap-2 noprint">
+      <input class="input input-bordered input-sm w-52" placeholder="Search description / voucher no." />
+      <select class="select select-bordered select-sm"><option>All sources</option><option>Voucher</option><option>Cash from office</option><option>Cash returned</option><option>Adjustment</option></select>
+      <input type="date" class="input input-bordered input-sm" value="2026-08-24" />
+      <input type="date" class="input input-bordered input-sm" value="2026-09-07" />
+      <div class="ml-auto flex gap-2">
+        <button class="btn btn-xs">Export CSV</button>
+        <button class="btn btn-xs" onclick="go('statement')">Print statement</button>
+      </div>
+    </div>
+    <table class="tbl">
+      <thead><tr>
+        <th style="width:92px">Posted</th><th style="width:120px">Source</th><th>Description</th>
+        <th class="text-right">In</th><th class="text-right">Out</th><th class="text-right">Balance</th><th style="width:40px" class="noprint"></th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="num text-stone-500">07 Sep</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td>EV-0414 · Site permit fee — Ashghal
+              <div class="text-[11px] text-stone-500 mt-0.5">Spent 06 Sep · approved on its own, out of cycle (urgent)</div></td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">373.00</td>
+            <td class="num text-right font-medium owed">−412.50</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">06 Sep</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td>EV-0412 · SIM cutter + consumables — Al Rawnaq
+              <div class="text-[11px] text-stone-500 mt-0.5">Spent 04 Sep · submission SUB-0041, approved 06 Sep</div></td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">502.50</td>
+            <td class="num text-right owed">−39.50</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr class="bg-stone-50/60">
+          <td class="num text-stone-500">06 Sep</td><td><span class="chip rev">Reversal</span></td>
+          <td><span class="line-through text-stone-400">EV-0409 · Taxi — airport run</span>
+              <div class="text-[11px] text-stone-500 mt-0.5">Reverses entry #4471 · rejected on review — personal trip</div></td>
+          <td class="num text-right" style="color:var(--cash-in)">120.00</td><td class="num text-right text-stone-300">—</td>
+          <td class="num text-right holds">463.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">06 Sep</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td class="text-stone-400"><span class="line-through">EV-0409 · Taxi — airport run</span>
+              <div class="text-[11px] mt-0.5">Reversed same day by entry #4479</div></td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right text-stone-400">120.00</td>
+            <td class="num text-right text-stone-500">343.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">06 Sep</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td>EV-0406 · Fuel + Salwa Road toll
+              <div class="text-[11px] text-stone-500 mt-0.5">Spent 03 Sep · submission SUB-0041</div></td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">180.00</td>
+            <td class="num text-right holds">463.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">06 Sep</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td>EV-0404 · Mounting brackets ×12 — Al Rawnaq
+              <div class="text-[11px] text-stone-500 mt-0.5">Spent 03 Sep · submission SUB-0041</div></td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">410.00</td>
+            <td class="num text-right holds">643.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">02 Sep</td><td><span class="chip src-handover">Cash from office</span></td>
+            <td>STL-0118 · Week 36 float — handed over by Fatima R.
+              <div class="text-[11px] text-stone-500 mt-0.5">Out of <a class="link link-hover" href="./cash-in-hand.html">head office petty cash</a>, entry #4402 · one movement, two books</div></td>
+            <td class="num text-right" style="color:var(--cash-in)">1,000.00</td><td class="num text-right text-stone-300">—</td>
+            <td class="num text-right holds">1,053.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">31 Aug</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td>EV-0396 · Taxi — Umm Salal site visit
+              <div class="text-[11px] text-stone-500 mt-0.5">Spent 30 Aug · submission SUB-0038, approved 31 Aug</div></td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">42.00</td>
+            <td class="num text-right holds">53.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">31 Aug</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td>EV-0392 · Courier — device return to supplier
+              <div class="text-[11px] text-stone-500 mt-0.5">Spent 28 Aug · submission SUB-0038</div></td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">65.00</td>
+            <td class="num text-right holds">95.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">31 Aug</td><td><span class="chip src-voucher">Voucher</span></td>
+            <td>EV-0388 · Fuel — Doha to Al Khor run
+              <div class="text-[11px] text-stone-500 mt-0.5">Spent 26 Aug · submission SUB-0038</div></td>
+            <td class="num text-right text-stone-300">—</td><td class="num text-right" style="color:var(--cash-out)">180.00</td>
+            <td class="num text-right holds">160.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+
+        <tr><td class="num text-stone-500">24 Aug</td><td><span class="chip src-opening">Opening</span></td>
+            <td>Opening balance — brought forward from August
+              <div class="text-[11px] text-stone-500 mt-0.5">Signed statement of 23 Aug</div></td>
+            <td class="num text-right" style="color:var(--cash-in)">340.00</td><td class="num text-right text-stone-300">—</td>
+            <td class="num text-right holds">340.00</td><td class="text-stone-400 text-center noprint">⋯</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note mt-4">
+    <b>Two dates per row, and they are not the same date.</b> <i>Posted</i> is when the office agreed the
+    entry and the balance moved; the description carries when the money was actually spent. Sorting on the
+    posted date is what lets a statement someone signed on the 6th still reconcile on the 20th — a book
+    ordered by spend date rewrites its own past every time a late voucher is approved.
+  </div>
+</section>
+
+<!-- ══════════ 3 · WEEKLY SUBMISSION ════════════════════════════ -->
+<section class="screen" id="s-submission">
+  <div class="flex items-start justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <div class="text-[12px] text-stone-500 noprint"><a class="link link-hover" onclick="go('overview')">Staff cash</a> › <a class="link link-hover" onclick="go('book')">Ahmed Rashid</a> › SUB-0042</div>
+      <h1 class="text-[22px] font-semibold mt-0.5">SUB-0042 <span class="text-[13px] font-normal text-stone-500">· Ahmed Rashid · 05–07 Sep 2026 · 7 vouchers</span></h1>
+    </div>
+    <div class="flex gap-2 items-center noprint">
+      <span class="chip st-submitted">submitted · awaiting approval</span>
+      <button class="btn btn-sm">Send back</button>
+      <button class="btn btn-sm btn-primary">Approve 6 lines · 580.00</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+    <div class="card-flat p-3"><div class="text-[11px] text-stone-400 uppercase font-semibold tracking-wide">Claimed</div><div class="num text-[20px] font-semibold">592.50</div></div>
+    <div class="card-flat p-3"><div class="text-[11px] text-stone-400 uppercase font-semibold tracking-wide">Approving</div><div class="num text-[20px] font-semibold holds">580.00</div></div>
+    <div class="card-flat p-3"><div class="text-[11px] text-stone-400 uppercase font-semibold tracking-wide">Queried</div><div class="num text-[20px] font-semibold owed">12.50</div></div>
+    <div class="card-flat p-3"><div class="text-[11px] text-stone-400 uppercase font-semibold tracking-wide">Bills attached</div><div class="text-[20px] font-semibold">6 <span class="text-[13px] font-normal text-stone-500">of 7</span></div></div>
+  </div>
+
+  <div class="card-flat overflow-hidden mb-4">
+    <table class="tbl">
+      <thead><tr>
+        <th style="width:34px" class="noprint"><input type="checkbox" class="checkbox checkbox-xs" checked /></th>
+        <th style="width:78px">Spent</th><th>Expense</th><th style="width:120px">Category</th>
+        <th style="width:96px">Bill</th><th class="text-right" style="width:96px">Amount</th><th style="width:120px">Decision</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="noprint"><input type="checkbox" class="checkbox checkbox-xs" checked /></td>
+          <td class="num text-stone-500">05 Sep</td>
+          <td><div class="font-medium">Fuel — Woqod Al Sadd</div><div class="text-[11px] text-stone-500">EV-0416 · vehicle 216471</div></td>
+          <td class="text-stone-600 text-[12px]">Fuel</td>
+          <td><span class="chip st-approved">receipt ✓</span></td>
+          <td class="num text-right">145.00</td>
+          <td><span class="chip st-approved">approve</span></td></tr>
+
+        <tr class="bg-orange-50/40"><td class="noprint"><input type="checkbox" class="checkbox checkbox-xs" /></td>
+          <td class="num text-stone-500">05 Sep</td>
+          <td><div class="font-medium">Parking — Msheireb</div>
+              <div class="text-[11px] owed mt-0.5">No bill. Ahmed's note: “machine printed nothing”.</div></td>
+          <td class="text-stone-600 text-[12px]">Travel</td>
+          <td><span class="chip st-queried">missing</span></td>
+          <td class="num text-right text-stone-500">12.50</td>
+          <td><span class="chip st-queried">queried</span></td></tr>
+
+        <tr><td class="noprint"><input type="checkbox" class="checkbox checkbox-xs" checked /></td>
+          <td class="num text-stone-500">06 Sep</td>
+          <td><div class="font-medium">Cable ties + heat shrink — Al Rawnaq</div><div class="text-[11px] text-stone-500">EV-0418</div></td>
+          <td class="text-stone-600 text-[12px]">Consumables</td>
+          <td><span class="chip st-approved">receipt ✓</span></td>
+          <td class="num text-right">88.00</td>
+          <td><span class="chip st-approved">approve</span></td></tr>
+
+        <tr><td class="noprint"><input type="checkbox" class="checkbox checkbox-xs" checked /></td>
+          <td class="num text-stone-500">06 Sep</td>
+          <td><div class="font-medium">Taxi — Industrial Area</div><div class="text-[11px] text-stone-500">EV-0419</div></td>
+          <td class="text-stone-600 text-[12px]">Travel</td>
+          <td><span class="chip st-approved">receipt ✓</span></td>
+          <td class="num text-right">35.00</td>
+          <td><span class="chip st-approved">approve</span></td></tr>
+
+        <tr><td class="noprint"><input type="checkbox" class="checkbox checkbox-xs" checked /></td>
+          <td class="num text-stone-500">06 Sep</td>
+          <td><div class="font-medium">Site meal allowance ×2</div>
+              <div class="text-[11px] mt-0.5" style="color:#7c2d12">Above the 25.00 per-head limit — supervisor note recorded by Nasser A.</div></td>
+          <td class="text-stone-600 text-[12px]">Allowance</td>
+          <td><span class="chip st-approved">receipt ✓</span></td>
+          <td class="num text-right">60.00</td>
+          <td><span class="chip st-approved">approve</span></td></tr>
+
+        <tr><td class="noprint"><input type="checkbox" class="checkbox checkbox-xs" checked /></td>
+          <td class="num text-stone-500">07 Sep</td>
+          <td><div class="font-medium">Fuel — Woqod Industrial Area</div><div class="text-[11px] text-stone-500">EV-0421 · vehicle 216471</div></td>
+          <td class="text-stone-600 text-[12px]">Fuel</td>
+          <td><span class="chip st-approved">receipt ✓</span></td>
+          <td class="num text-right">152.00</td>
+          <td><span class="chip st-approved">approve</span></td></tr>
+
+        <tr><td class="noprint"><input type="checkbox" class="checkbox checkbox-xs" checked /></td>
+          <td class="num text-stone-500">07 Sep</td>
+          <td><div class="font-medium">Replacement bracket — supplier walk-in</div>
+              <div class="text-[11px] mt-0.5" style="color:#7c2d12">Same amount and supplier as EV-0404 on 03 Sep — check it is not the same bill twice.</div></td>
+          <td class="text-stone-600 text-[12px]">Parts</td>
+          <td><span class="chip st-approved">receipt ✓</span></td>
+          <td class="num text-right">100.00</td>
+          <td><span class="chip st-approved">approve</span></td></tr>
+      </tbody>
+      <tfoot><tr class="bg-stone-50">
+        <td colspan="5" class="text-right text-[12px] font-medium text-stone-600 py-3 px-3">Approving 6 of 7 lines</td>
+        <td class="num text-right font-semibold py-3">580.00</td><td></td>
+      </tr></tfoot>
+    </table>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+    <div class="card-flat p-4">
+      <div class="font-medium text-[14px] mb-2">What Approve does, in one transaction</div>
+      <ul class="text-[12.5px] text-stone-600 leading-relaxed list-disc pl-4 space-y-1">
+        <li>Posts <b>six</b> voucher entries to Ahmed's cash book, dated today.</li>
+        <li>Moves his agreed balance <span class="num">−412.50 → −992.50</span>.</li>
+        <li>Leaves line 2 on the submission as <b>queried</b>, not deleted — it comes back with the bill or it does not come back.</li>
+        <li>Closes SUB-0042 as <b>approved</b>. It is now a document, not a working list.</li>
+      </ul>
+    </div>
+    <div class="card-flat p-4">
+      <div class="font-medium text-[14px] mb-2">Sending it back releases the lines</div>
+      <div class="text-[12.5px] text-stone-600 leading-relaxed">
+        A voucher belongs to at most one submission at a time. <b>Send back</b> unclaims every line, so
+        Ahmed can correct them and submit again — the same shape as cancelling an invoice releasing its
+        subscription slips. Skip the release and those vouchers are attached to a submission that no longer
+        claims them: invisible to his next week, and never claimable again.
+      </div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <b>A queried line is answered by the staff member, never edited by the office.</b> Correcting Ahmed's
+    12.50 into something with a bill behind it, on his behalf, produces a claim he did not make and a
+    signature block that says he did.
+  </div>
+</section>
+
+<!-- ══════════ 4 · SETTLE ═══════════════════════════════════════ -->
+<section class="screen" id="s-settle">
+  <div class="mb-4">
+    <div class="text-[12px] text-stone-500 noprint"><a class="link link-hover" onclick="go('overview')">Staff cash</a> › <a class="link link-hover" onclick="go('book')">Ahmed Rashid</a> › Settle</div>
+    <h1 class="text-[22px] font-semibold mt-0.5">Settle</h1>
+    <p class="text-[13px] text-stone-500 mt-0.5">Cash across the desk, in either direction. One screen, because paying a staff member back and giving them next week's float are the same movement.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card-flat p-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="form-control">
+          <div class="label"><span class="label-text text-[12.5px] font-medium">Staff member</span></div>
+          <select class="select select-bordered select-sm"><option>Ahmed Rashid · #14</option><option>Bilal Hussain · #22</option></select>
+          <div class="text-[11.5px] text-stone-500 mt-1.5">Agreed balance <span class="num owed">−412.50</span> · we owe him</div>
+        </label>
+        <label class="form-control">
+          <div class="label"><span class="label-text text-[12.5px] font-medium">Direction</span></div>
+          <select class="select select-bordered select-sm"><option>Office → staff</option><option>Staff → office (returning cash)</option></select>
+        </label>
+        <label class="form-control">
+          <div class="label"><span class="label-text text-[12.5px] font-medium">Amount</span></div>
+          <label class="input input-bordered input-sm flex items-center gap-2">
+            <span class="text-stone-400 text-[12px]">QAR</span><input class="grow num" value="1,412.50" />
+          </label>
+          <div class="text-[11.5px] text-stone-500 mt-1.5">Suggested: <span class="num">412.50</span> to clear + <span class="num">1,000.00</span> float for week 37</div>
+        </label>
+        <label class="form-control">
+          <div class="label"><span class="label-text text-[12.5px] font-medium">Paid from</span></div>
+          <select class="select select-bordered select-sm"><option>Head office petty cash — 4,820.00</option><option>Bank transfer — QNB ****4471</option><option>Next payroll (deduction / addition)</option></select>
+        </label>
+        <label class="form-control md:col-span-2">
+          <div class="label"><span class="label-text text-[12.5px] font-medium">Covers</span></div>
+          <div class="border border-stone-200 rounded-lg p-3 text-[12.5px] space-y-1.5">
+            <div class="flex gap-2 items-center"><input type="checkbox" class="checkbox checkbox-xs" checked /> SUB-0041 · approved 06 Sep · <span class="num">1,092.50</span></div>
+            <div class="flex gap-2 items-center"><input type="checkbox" class="checkbox checkbox-xs" checked /> EV-0414 · approved 07 Sep · <span class="num">373.00</span></div>
+            <div class="flex gap-2 items-center text-stone-400"><input type="checkbox" class="checkbox checkbox-xs" disabled /> SUB-0042 · <span class="chip st-submitted">awaiting approval</span> — cannot be settled until approved</div>
+            <div class="text-[11.5px] text-stone-500 pt-1.5 mt-1 border-t border-stone-100">
+              These approved items come to <span class="num">1,465.50</span>, of which <span class="num">1,053.00</span>
+              was already funded by the 02 Sep float. <b>412.50 is what is still owed</b> — the balance, not the
+              sum of the ticks, is what gets paid.
+            </div>
+          </div>
+        </label>
+        <label class="form-control md:col-span-2">
+          <div class="label"><span class="label-text text-[12.5px] font-medium">Note</span></div>
+          <input class="input input-bordered input-sm" value="Week 36 reimbursement and week 37 float, handed over at head office." />
+        </label>
+      </div>
+      <div class="flex gap-2 mt-5 noprint">
+        <button class="btn btn-sm btn-primary">Post settlement</button>
+        <button class="btn btn-sm btn-ghost">Cancel</button>
+        <button class="btn btn-sm ml-auto">Post &amp; print acknowledgement</button>
+      </div>
+    </div>
+
+    <div class="space-y-3">
+      <div class="card-flat p-4">
+        <div class="font-medium text-[13.5px] mb-2">This posts two entries</div>
+        <div class="text-[12.5px] text-stone-600 leading-relaxed space-y-2">
+          <div class="flex justify-between"><span>Head office petty cash</span><span class="num" style="color:var(--cash-out)">−1,412.50</span></div>
+          <div class="flex justify-between"><span>Ahmed Rashid</span><span class="num" style="color:var(--cash-in)">+1,412.50</span></div>
+          <div class="border-t border-stone-200 pt-2 flex justify-between font-medium"><span>Ahmed's new balance</span><span class="num holds">+1,000.00</span></div>
+        </div>
+        <div class="text-[11.5px] text-stone-500 mt-3">One movement, two books, linked by <span class="num">counterpartEntryId</span>. Reversing one reverses the other.</div>
+      </div>
+      <div class="note">
+        <b>There is no separate “advance” type.</b> Cash going to a staff member is one movement; whether it
+        is a reimbursement or a float is just where the balance stood before it. Two types would mean
+        deciding, for this 1,412.50, which 412.50 was which — a question with no answer and two screens to
+        maintain.
+      </div>
+      <div class="warn">
+        <b>Only approved amounts can be settled.</b> SUB-0042 is greyed out above. Paying against an
+        unapproved claim means the bills arrive after the cash, which is how a float and a reimbursement
+        become impossible to tell apart.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 5 · SIGNED STATEMENT ═════════════════════════════ -->
+<section class="screen" id="s-statement">
+  <div class="flex items-start justify-between mb-4 flex-wrap gap-3 noprint">
+    <div>
+      <div class="text-[12px] text-stone-500"><a class="link link-hover" onclick="go('book')">Ahmed Rashid</a> › Statement</div>
+      <h1 class="text-[22px] font-semibold mt-0.5">Signed statement</h1>
+      <p class="text-[13px] text-stone-500 mt-0.5">The artifact that makes the rest of it trustworthy: a period both sides agreed, closed, and cannot reopen.</p>
+    </div>
+    <div class="flex gap-2"><button class="btn btn-sm">Download PDF</button><button class="btn btn-sm btn-primary">Print &amp; sign</button></div>
+  </div>
+
+  <div class="bg-white mx-auto" style="max-width:760px;border:1px solid #e7e5e4;border-radius:12px;padding:40px 44px">
+    <div class="flex justify-between items-start pb-4 mb-5" style="border-bottom:2px solid #1c1917">
+      <div>
+        <div class="text-[17px] font-semibold">Cloud Telematics W.L.L.</div>
+        <div class="text-[11.5px] text-stone-500 mt-0.5">Doha, Qatar · cloudtelematics.net</div>
+      </div>
+      <div class="text-right">
+        <div class="text-[15px] font-semibold">Staff cash statement</div>
+        <div class="num text-[11.5px] text-stone-500 mt-0.5">STMT-2026-09-014</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6 mb-6 text-[12.5px]">
+      <div>
+        <div class="text-[10.5px] uppercase tracking-wide text-stone-400 font-semibold mb-1">Staff member</div>
+        <div class="font-medium text-[13.5px]">Ahmed Rashid</div>
+        <div class="text-stone-600">Field technician · Staff no. 14</div>
+      </div>
+      <div class="text-right">
+        <div class="text-[10.5px] uppercase tracking-wide text-stone-400 font-semibold mb-1">Period</div>
+        <div class="font-medium text-[13.5px]">24 Aug — 07 Sep 2026</div>
+        <div class="text-stone-600">Currency QAR</div>
+      </div>
+    </div>
+
+    <table class="tbl mb-6" style="border:1px solid #e7e5e4;border-radius:8px;overflow:hidden">
+      <tbody>
+        <tr><td class="text-[12.5px]">Opening balance, 24 Aug</td><td class="num text-right">340.00</td></tr>
+        <tr><td class="text-[12.5px]">Cash received from office</td><td class="num text-right" style="color:var(--cash-in)">1,000.00</td></tr>
+        <tr><td class="text-[12.5px]">Reversals in your favour</td><td class="num text-right" style="color:var(--cash-in)">120.00</td></tr>
+        <tr><td class="text-[12.5px]">Expenses approved (8 vouchers)</td><td class="num text-right" style="color:var(--cash-out)">1,872.50</td></tr>
+        <tr style="background:#fafaf9"><td class="text-[13.5px] font-semibold py-3">Closing balance, 07 Sep</td>
+            <td class="num text-right text-[15px] font-semibold py-3 owed">−412.50</td></tr>
+      </tbody>
+    </table>
+
+    <div class="p-3.5 mb-6" style="border-left:3px solid #c2620a;background:#fff7ed;border-radius:0 8px 8px 0">
+      <div class="text-[12.5px]" style="color:#7c2d12">
+        <b>The company owes you QAR 412.50 (four hundred twelve and 50/100 only).</b>
+        Claims of QAR 592.50 under SUB-0042 were still awaiting approval on 07 Sep and are not included above.
+      </div>
+    </div>
+
+    <div class="text-[11.5px] text-stone-600 leading-relaxed mb-8">
+      This statement lists every movement agreed between you and the company in the period shown. If you do
+      not agree with a line, raise it within seven days of signing; after that the opening balance of the
+      next period is taken from the closing balance above.
+    </div>
+
+    <div class="grid grid-cols-2 gap-10 pt-4">
+      <div>
+        <div style="border-bottom:1px solid #a8a29e;height:38px"></div>
+        <div class="text-[11.5px] text-stone-600 mt-1.5">Ahmed Rashid · staff member</div>
+        <div class="text-[10.5px] text-stone-400">Date</div>
+      </div>
+      <div>
+        <div style="border-bottom:1px solid #a8a29e;height:38px"></div>
+        <div class="text-[11.5px] text-stone-600 mt-1.5">Fatima Rahman · accounts</div>
+        <div class="text-[10.5px] text-stone-400">Date</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note mt-4 noprint" style="max-width:760px;margin-left:auto;margin-right:auto">
+    <b>Closing a period is the only thing that stops the book growing forever.</b> Once signed, the period's
+    entries are read-only and the next book opens with a single <span class="num">opening</span> entry —
+    which is why an approved entry is reversed rather than edited: a correction after signing has to be
+    visible as its own line, dated after the signature.
+  </div>
+</section>
+
+<!-- ══════════ 6 · DATA MODEL ═══════════════════════════════════ -->
+<section class="screen" id="s-model">
+  <h1 class="text-[22px] font-semibold">What it costs to build</h1>
+  <p class="text-[13px] text-stone-500 mt-0.5 mb-5">Two new tables on top of the cash-in-hand work, and six columns on the voucher. The ledger itself is not rebuilt.</p>
+
+  <div class="card-flat p-4 mb-5" style="border-color:#ccfbf1;background:#f0fdfa">
+    <div class="font-medium text-[14px]" style="color:#115e59">A staff cash book is an <span class="num">adminCashAccount</span>, not a second ledger</div>
+    <div class="text-[12.5px] mt-1.5 leading-relaxed" style="color:#134e4a">
+      The cash-in-hand design already has accounts, entries, counterpart pairs and reversals, and
+      <span class="num">custodianStaffId</span> is already on the account. A staff book is that table with
+      <span class="num">accountType = "staff"</span>. Building a parallel ledger would mean two sets of
+      posting rules, and the handover between an office box and a staff member would have to be written twice
+      — once in each, agreeing by hand.
+    </div>
+  </div>
+
+  <div class="card-flat overflow-hidden mb-5">
+    <div class="px-4 py-3 border-b border-stone-200 font-medium text-[14px]">Where the two account types genuinely differ</div>
+    <table class="tbl">
+      <thead><tr><th style="width:210px"></th><th>Cash box</th><th>Staff cash book</th></tr></thead>
+      <tbody>
+        <tr><td class="font-medium">A negative balance</td>
+            <td>an error — you cannot hold minus cash</td>
+            <td class="holds">normal — it means we owe them</td></tr>
+        <tr><td class="font-medium">Physical count</td>
+            <td>the control: count the notes, explain the variance</td>
+            <td><b>never counted.</b> You cannot audit an employee's wallet — their money and ours are the same notes</td></tr>
+        <tr><td class="font-medium">What replaces the count</td>
+            <td>—</td>
+            <td>a signed statement per period, and ageing on unanswered claims</td></tr>
+        <tr><td class="font-medium">When an expense posts</td>
+            <td>when the cash leaves the box</td>
+            <td>when the office <b>approves</b> the claim</td></tr>
+        <tr><td class="font-medium">Custodian</td>
+            <td>a staff member looking after company cash</td>
+            <td>the staff member <i>is</i> the account</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+    <div class="card-flat p-4">
+      <div class="font-semibold text-[13.5px]">adminCashAccounts <span class="chip st-approved ml-1">exists</span></div>
+      <div class="text-[12px] text-stone-500 mt-1">Gains two columns.</div>
+      <div class="num text-[11.5px] text-stone-600 mt-2 leading-relaxed">
+        accountType (box | staff)<br>staffId<br><span class="text-stone-400">…everything else unchanged</span>
+      </div>
+    </div>
+    <div class="card-flat p-4" style="border-color:#ccfbf1;background:#f0fdfa">
+      <div class="font-semibold text-[13.5px]" style="color:#115e59">adminCashSubmissions <span class="chip st-submitted ml-1">new</span></div>
+      <div class="text-[12px] mt-1" style="color:#134e4a">The weekly bundle handed in.</div>
+      <div class="num text-[11.5px] mt-2 leading-relaxed" style="color:#134e4a">
+        id · adminAppId · staffId<br>submissionWebNumber<br>periodFrom · periodTo<br>submissionStatus<br>claimedTotal · approvedTotal<br>submittedAt · decidedAt<br>decidedById / Name · note
+      </div>
+    </div>
+    <div class="card-flat p-4" style="border-color:#ccfbf1;background:#f0fdfa">
+      <div class="font-semibold text-[13.5px]" style="color:#115e59">adminCashSettlements <span class="chip st-submitted ml-1">new</span></div>
+      <div class="text-[12px] mt-1" style="color:#134e4a">Cash across the desk, and what was signed for.</div>
+      <div class="num text-[11.5px] mt-2 leading-relaxed" style="color:#134e4a">
+        id · adminAppId · staffId<br>settlementWebNumber<br>amount · currency<br>direction · paymentMethod<br>fromCashAccountId<br>staffEntryId · officeEntryId<br>signedByStaffAt
+      </div>
+    </div>
+  </div>
+
+  <div class="card-flat overflow-hidden mb-5">
+    <div class="px-4 py-3 border-b border-stone-200 font-medium text-[14px]">Where an entry on a staff book comes from</div>
+    <table class="tbl">
+      <thead><tr><th>Source</th><th>Posted when</th><th>Direction</th><th>Reversed when</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip src-opening">opening</span></td><td>the book is opened, or a period is closed and signed</td>
+            <td style="color:var(--cash-in)">either</td><td>never</td></tr>
+        <tr><td><span class="chip src-voucher">adminExpenseVoucher</span></td>
+            <td>the claim is <b>approved</b> — not when it is recorded, not when it is spent</td>
+            <td style="color:var(--cash-out)">out</td><td>the approval is withdrawn, or the voucher is cancelled</td></tr>
+        <tr><td><span class="chip src-handover">adminCashSettlement</span></td>
+            <td>cash is handed over, in either direction</td><td>a pair, with the office box</td><td>reversed as a pair</td></tr>
+        <tr><td><span class="chip src-payroll">payroll</span></td>
+            <td>a balance is cleared through the next salary run</td>
+            <td style="color:var(--cash-in)">either</td><td>the payroll line is reversed</td></tr>
+        <tr><td><span class="chip src-adjust">adjustment</span></td>
+            <td>a signed statement is disputed and settled, or a balance is written off</td>
+            <td>either</td><td>never — a further adjustment instead</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+    <div class="card-flat p-4">
+      <div class="font-medium text-[14px] mb-2">Migration to the existing voucher</div>
+      <div class="text-[12.5px] text-stone-600 leading-relaxed">
+        On top of the columns the cash-in-hand work adds, <span class="num">adminExpenseVouchers</span> gains
+        <span class="num">staffId</span>, <span class="num">adminCashSubmissionId</span>,
+        <span class="num">claimStatus</span> (draft · submitted · approved · queried · withdrawn),
+        <span class="num">decidedAt</span> and <span class="num">queryReason</span>, all nullable. Every
+        existing row reads as an office expense with no staff claim behind it, which is what they are.
+        <span class="num">adminCashSubmissionId</span> is the claim link and behaves exactly like
+        <span class="num">appSubscriptionSlips.adminInvoiceId</span> — claimed by a compare-and-swap,
+        released when the submission is sent back.
+      </div>
+    </div>
+    <div class="card-flat p-4">
+      <div class="font-medium text-[14px] mb-2">The rules that have to hold</div>
+      <ul class="text-[12.5px] text-stone-600 leading-relaxed list-disc pl-4 space-y-1">
+        <li>Balance is <b>summed from entries</b>, never stored on the account.</li>
+        <li>A posted entry is reversed, never edited or deleted.</li>
+        <li>A voucher belongs to at most one open submission; sending one back <b>releases</b> its lines.</li>
+        <li>Approval posts the entry on the approval's own transaction, with the audit row.</li>
+        <li>A settlement writes <b>both</b> entries or neither, linked by <span class="num">counterpartEntryId</span>.</li>
+        <li>Only approved amounts are settleable; a pending claim is never payable.</li>
+        <li>Every claim line needs a <span class="num">receipt</span> document, on the same gate the vendor-bill payment already uses.</li>
+        <li>A staff member with a login sees their own book and nobody else's; approving is a supervisor act.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="warn">
+    <b>The one thing this design cannot do, stated plainly.</b> Because a staff book is never counted, it
+    cannot detect a staff member spending a float on something they never claim — the balance simply sits
+    there looking like cash they are holding. Ageing on <i>days since last submission</i> is the whole
+    control for that case, which is why it is a column on the list screen rather than a detail buried in the
+    book, and why Nasser's 24 days is as visible as Bilal's 18.
+  </div>
+</section>
+
+</main>
+
+<div class="tt" id="tt"></div>
+
+<script>
+/* ── screen switching ───────────────────────────────────────── */
+function go(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === 's'+'-'+name));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const on = b.dataset.s === name;
+    b.classList.toggle('border-teal-700', on); b.classList.toggle('text-teal-800', on); b.classList.toggle('font-medium', on);
+    b.classList.toggle('border-transparent', !on); b.classList.toggle('text-stone-500', !on);
+  });
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => go(b.dataset.s));
+
+const TT = document.getElementById('tt');
+const money = n => (n < 0 ? '−' : '') + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+function showTT(e, text){
+  TT.textContent = text; TT.classList.add('on');
+  const w = TT.offsetWidth || 160;
+  TT.style.left = Math.min(e.clientX + 14, window.innerWidth - w - 12) + 'px';
+  TT.style.top  = (e.clientY - 44) + 'px';
+}
+const hideTT = () => TT.classList.remove('on');
+
+/* ── 1 · diverging bars: where every staff member stands ────── */
+const STAFF = [
+  {n:'Nasser Al-Kuwari', r:'#02 · Supervisor',        v: 2400.00, p:0,       age:24},
+  {n:'Suresh Kumar',     r:'#11 · Installation lead', v: 1180.00, p:0,       age:6},
+  {n:'Fatima Rahman',    r:'#03 · Office admin',      v:  150.00, p:0,       age:3},
+  {n:'Jinu Thomas',      r:'#19 · Technician',        v:    0.00, p:0,       age:1},
+  {n:'Mary Sebastian',   r:'#08 · Accounts',          v:  -38.25, p:0,       age:2},
+  {n:'Rakesh Menon',     r:'#31 · Driver',            v:  -86.00, p: 240.00, age:5},
+  {n:'Ahmed Rashid',     r:'#14 · Field technician',  v: -412.50, p: 592.50, age:0},
+  {n:'Bilal Hussain',    r:'#22 · Field technician',  v:-1240.75, p:1455.00, age:18},
+];
+(function drawBalances(){
+  const svg = document.getElementById('balchart');
+  const W = 760, H = 300, L = 148, R = 96, T = 16, B = 30;
+  const pw = W - L - R, ph = H - T - B;
+  const cx = L + pw/2, half = pw/2 - 10, MAX = 2400;
+  const x = v => cx + (v / MAX) * half;
+  const rowH = ph / STAFF.length, barH = 13;
+  let s = '';
+
+  [-2400,-1200,1200,2400].forEach(t => {
+    s += '<line class="grid-line" x1="'+x(t)+'" x2="'+x(t)+'" y1="'+T+'" y2="'+(T+ph)+'"/>';
+    s += '<text class="axis-txt" x="'+x(t)+'" y="'+(H-10)+'" text-anchor="middle">'+money(Math.abs(t))+'</text>';
+  });
+
+  STAFF.forEach((d, k) => {
+    const yTop = T + rowH*k, yBar = yTop + (rowH - barH)/2;
+    s += '<text class="axis-txt" style="fill:var(--ink-1);font-size:12px;font-weight:500" x="'+(L-14)+'" y="'+(yBar+2)+'" text-anchor="end">'+d.n+'</text>';
+    s += '<text class="axis-txt" style="font-size:10px" x="'+(L-14)+'" y="'+(yBar+14)+'" text-anchor="end">'+d.r+'</text>';
+    if (Math.abs(d.v) > 0.005){
+      const hue = d.v > 0 ? 'var(--cash-in)' : 'var(--cash-out)';
+      s += '<path class="bar" data-k="'+k+'" d="'+hbar(cx, x(d.v), yBar, barH, 4)+'" fill="'+hue+'"/>';
+      const lx = d.v > 0 ? x(d.v) + 9 : x(d.v) - 9;
+      s += '<text class="axis-txt" style="fill:var(--ink-2);font-size:11.5px;font-weight:600" x="'+lx+'" y="'+(yBar+10)+'" text-anchor="'+(d.v>0?'start':'end')+'">'+money(d.v)+'</text>';
+    } else {
+      s += '<text class="axis-txt" style="font-size:11.5px" x="'+(cx+9)+'" y="'+(yBar+10)+'">settled</text>';
+    }
+  });
+  s += '<line class="zero-line" x1="'+cx+'" x2="'+cx+'" y1="'+(T-4)+'" y2="'+(T+ph+4)+'"/>';
+  s += '<text class="axis-txt" x="'+cx+'" y="'+(H-10)+'" text-anchor="middle">0</text>';
+  svg.innerHTML = s;
+
+  svg.querySelectorAll('.bar').forEach(p => {
+    p.style.cursor = 'pointer';
+    p.addEventListener('mousemove', e => {
+      const d = STAFF[+p.dataset.k];
+      const line1 = d.v > 0 ? d.n + ' holds QAR ' + money(d.v) + ' of our cash'
+                            : 'We owe ' + d.n + ' QAR ' + money(-d.v);
+      const line2 = d.p > 0 ? 'plus ' + money(d.p) + ' claimed, not yet approved' : 'nothing awaiting approval';
+      showTT(e, line1 + '\n' + line2 + '\n' + d.age + ' days since last submission');
+      p.setAttribute('stroke','#fff'); p.setAttribute('stroke-width','2');
+    });
+    p.addEventListener('mouseleave', () => { hideTT(); p.removeAttribute('stroke'); });
+  });
+})();
+
+/* rounded only on the data end, square against the zero baseline */
+function hbar(x0, x1, y, h, r){
+  const dir = x1 >= x0 ? 1 : -1, w = Math.abs(x1 - x0), rr = Math.min(r, w);
+  const xe = x1 - dir*rr;
+  return 'M'+x0+','+y+' L'+xe+','+y+' Q'+x1+','+y+' '+x1+','+(y+rr)
+       + ' L'+x1+','+(y+h-rr)+' Q'+x1+','+(y+h)+' '+xe+','+(y+h)+' L'+x0+','+(y+h)+' Z';
+}
+
+/* ── 2 · Ahmed's balance, agreed vs including pending ───────── */
+const DAYS   = ['24 Aug','25 Aug','26 Aug','27 Aug','28 Aug','29 Aug','30 Aug','31 Aug','01 Sep','02 Sep','03 Sep','04 Sep','05 Sep','06 Sep','07 Sep'];
+const AGREED = [340,340,340,340,340,340,340,53,53,1053,1053,1053,1053,-39.5,-412.5];
+const GHOST  = [340,340,160,160,95,95,53,53,53,1053,463,-39.5,-39.5,-412.5,-1005];
+(function drawBook(){
+  const svg = document.getElementById('linechart');
+  const W = 760, H = 260, L = 60, R = 84, T = 16, B = 30;
+  const pw = W - L - R, ph = H - T - B;
+  const MIN = -1100, MAX = 1100;
+  const x = i => L + (i / (DAYS.length - 1)) * pw;
+  const y = v => T + ph - ((v - MIN) / (MAX - MIN)) * ph;
+  const zeroY = y(0);
+  let s = '<defs>'
+        + '<clipPath id="cAbove"><rect x="0" y="0" width="'+W+'" height="'+zeroY+'"/></clipPath>'
+        + '<clipPath id="cBelow"><rect x="0" y="'+zeroY+'" width="'+W+'" height="'+(H-zeroY)+'"/></clipPath>'
+        + '</defs>';
+
+  [-1000,-500,500,1000].forEach(t => {
+    s += '<line class="grid-line" x1="'+L+'" x2="'+(W-R)+'" y1="'+y(t)+'" y2="'+y(t)+'"/>';
+    s += '<text class="axis-txt" x="'+(L-8)+'" y="'+(y(t)+3.5)+'" text-anchor="end">'+money(t)+'</text>';
+  });
+  s += '<text class="axis-txt" x="'+(L-8)+'" y="'+(zeroY+3.5)+'" text-anchor="end">0</text>';
+
+  const step = arr => {
+    let d = 'M'+x(0)+','+y(arr[0]);
+    for (let i = 1; i < arr.length; i++) d += ' L'+x(i)+','+y(arr[i-1])+' L'+x(i)+','+y(arr[i]);
+    return d;
+  };
+  const area = step(AGREED) + ' L'+x(AGREED.length-1)+','+zeroY+' L'+x(0)+','+zeroY+' Z';
+  s += '<path d="'+area+'" fill="var(--cash-in)"  opacity=".16" clip-path="url(#cAbove)"/>';
+  s += '<path d="'+area+'" fill="var(--cash-out)" opacity=".16" clip-path="url(#cBelow)"/>';
+  s += '<line class="zero-line" x1="'+L+'" x2="'+(W-R)+'" y1="'+zeroY+'" y2="'+zeroY+'"/>';
+  s += '<path d="'+step(GHOST)+'" fill="none" stroke="#a8a29e" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>';
+  s += '<path d="'+step(AGREED)+'" fill="none" stroke="var(--cash-in)"  stroke-width="2" stroke-linejoin="round" clip-path="url(#cAbove)"/>';
+  s += '<path d="'+step(AGREED)+'" fill="none" stroke="var(--cash-out)" stroke-width="2" stroke-linejoin="round" clip-path="url(#cBelow)"/>';
+
+  [0,4,7,10,14].forEach(i => { s += '<text class="axis-txt" x="'+x(i)+'" y="'+(H-10)+'" text-anchor="middle">'+DAYS[i]+'</text>'; });
+
+  const last = DAYS.length - 1;
+  s += '<circle cx="'+x(last)+'" cy="'+y(AGREED[last])+'" r="4.5" fill="var(--cash-out)" stroke="#fff" stroke-width="2"/>';
+  s += '<circle cx="'+x(last)+'" cy="'+y(GHOST[last])+'" r="4.5" fill="#a8a29e" stroke="#fff" stroke-width="2"/>';
+  s += '<text class="axis-txt" style="fill:var(--ink-2);font-size:11.5px;font-weight:600" x="'+(x(last)+9)+'" y="'+(y(AGREED[last])+4)+'">'+money(AGREED[last])+'</text>';
+  s += '<text class="axis-txt" style="font-size:11.5px" x="'+(x(last)+9)+'" y="'+(y(GHOST[last])+4)+'">'+money(GHOST[last])+'</text>';
+
+  s += '<line id="cross" x1="0" x2="0" y1="'+T+'" y2="'+(T+ph)+'" stroke="#78716c" stroke-width="1" opacity="0"/>';
+  s += '<rect id="hit" x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'" fill="transparent"/>';
+  svg.innerHTML = s;
+
+  const cross = svg.querySelector('#cross');
+  svg.querySelector('#hit').addEventListener('mousemove', e => {
+    const box = svg.getBoundingClientRect();
+    const i = Math.max(0, Math.min(DAYS.length-1,
+      Math.round((((e.clientX - box.left) / box.width) * W - L) / pw * (DAYS.length - 1))));
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity','.35');
+    const gap = GHOST[i] - AGREED[i];
+    showTT(e, DAYS[i] + ' 2026'
+      + '\nAgreed balance      ' + money(AGREED[i])
+      + '\nIncluding claims    ' + money(GHOST[i])
+      + (Math.abs(gap) > 0.005 ? '\nUnapproved gap      ' + money(gap) : '\nNothing unapproved'));
+  });
+  svg.querySelector('#hit').addEventListener('mouseleave', () => { cross.setAttribute('opacity','0'); hideTT(); });
+})();
+</script>
+</body>
+</html>
